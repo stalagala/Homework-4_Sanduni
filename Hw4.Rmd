@@ -1,0 +1,207 @@
+---
+title: "Homework 4"
+author: "Sanduni Talagala"
+date: "February 22, 2020"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("/Users/owner1/Desktop/bi612/Homework 4/Homework 4")
+```
+
+##1) Import titanic and read data dredging**
+```{r}
+titanic<-read.csv("titanic (1).csv")
+```
+
+##2) variables of impact
+
+variable 1 = class. I believe that 1st class people would have bee given priority in anything even when it comes to who gets to escape first because first class people paid more and get first priority of treatment, so I expect first class people to survive more. 
+
+variable 2 = Gender. Back in the day whenever a disaster strikes women were saved before men. Usually men did the saving and women got saved, so I expect women to survive more. 
+
+variable 3 = age. I believe that children would be given priority over adults because children are dependant and they need to be assisted out of the ship before adults (also younger people will be saved first because they have so much life ahead of them). Therefore, younger people will survive more.  
+
+variable 4 = fare. People who paid more for the ticket may get get priority over the others because usually people that paid more gets better treatment, and will survive more. 
+
+variable 5 = siblings/spouses. I think that the more people you're with (siblings/spouses) you will feel the need to save them too. This would make it hard for you to save yourself and may end up getting trapped and dying trying to save the loved ones. 
+
+##3) plots
+
+*variable 1 - class (categorical)*
+1st class ones seemed to have survived more, then the second class and then the third.
+```{r}
+##install.packages("vcd")
+library(vcd)
+mosaic(survived~pclass, data=titanic)
+```
+
+*variable 2 - Gender (categorical)*
+females seemed to have survived more.
+```{r}
+mosaic(survived~Gender, data=titanic)
+```
+
+*variable 3 - age (continuous)*
+Younger ones seemed to have survived more
+```{r}
+##install.packages("popbio")
+library(popbio)
+titanic.age<-na.omit(data.frame("age"=titanic$age,"survival"=titanic$survived))
+logi.hist.plot(titanic.age$age,titanic.age$survival,boxp=FALSE,type="hist",col="gray", xlabel="Age")
+```
+
+*variable 4 - fare (continuous)*
+The ones that had larger fare values seemed to have survived more until it levels
+```{r}
+titanic.fare<-na.omit(data.frame("fare"=titanic$fare,"survival"=titanic$survived))
+logi.hist.plot(titanic.fare$fare,titanic.fare$survival,boxp=FALSE,type="hist",col="gray", xlabel="Fare")
+```
+
+*variable 5 - siblings/spouses (continous)*
+Ones with more siblings or spouses with themseem to sruvive less.
+```{r}
+titanic.sibsp<-na.omit(data.frame("sibsp"=titanic$sibsp,"survival"=titanic$survived))
+logi.hist.plot(titanic.siblings$x,titanic.siblings$survival,boxp=FALSE,type="hist",col="gray", xlabel="siblings")
+```
+
+
+##4) autoselection
+Autoselection included age, class and gender.
+```{r}
+##install.packages("bestglm")
+library(bestglm)
+my.variables=data.frame("age"=titanic$age,"class"=titanic$pclass, "gender"=titanic$Gender, "fare"=titanic$fare, "sibsp"=titanic$sibsp, "survival" =titanic$survived)
+my.variables.titanic=na.omit(my.variables)
+bestglm(my.variables.titanic,IC="AIC",family=binomial)
+```
+
+##5) logistic regression summary
+```{r}
+modelauto<-glm(survival~age+class+gender+sibsp, data=my.variables.titanic)
+summary.lm(modelauto)
+```
+
+##6) purposeful selection
+*class univariate*
+```{r}
+univariate.class=glm(survival~class, data=my.variables.titanic, family=binomial(link="logit"))
+summary(univariate.class)
+```
+
+*Gender univariate*
+```{r}
+univariate.gender=glm(survival~gender, data=my.variables.titanic, family=binomial(link="logit"))
+summary(univariate.gender)
+```
+
+*age univariate*
+```{r}
+univariate.age=glm(survival~age, data=my.variables.titanic, family=binomial(link="logit"))
+summary(univariate.age)
+```
+
+*fare univariate*
+```{r}
+univariate.fare=glm(survival~fare, data=my.variables.titanic, family=binomial(link="logit"))
+summary(univariate.fare)
+```
+
+*sibsp univariate*
+```{r}
+univariate.sib=glm(survival~sibsp, data=my.variables.titanic, family=binomial(link="logit"))
+summary(univariate.sib)
+```
+
+*make model*
+Here I made a model with only the sigificant ones and did not include the factors that did not show significant when I did univariate. 
+```{r}
+#This is a model with only the significant ones - excluded age as that was not significant
+modelpicked<-glm(survival~class+gender+fare, data=my.variables.titanic, family=binomial(link="logit"))
+summary(modelpicked)
+```
+
+*compare models*
+```{r}
+##install.packages("lmtest")
+library(lmtest)
+lrtest(modelauto,modelpicked)
+```
+
+##7) are they different?
+Yes it produced a different model. Purposeful selection gave a different model than the auto selection. Auto selection had age, class and gender as predictors whereas the manual selection had class, gender,parch,fare as predictors.
+
+##8) Alleffects 
+Yes, the effects are in the direction I expected. The younger ones (kids) will be given priority and will survive more, high class ones will be given priority and females (1) will be given priority over men. People with more siblings/spouse will be less likely to live as predicted (however this one seem to have a lot some noise, still it is in the direction I predicted).
+```{r}
+##install.packages("effects")
+library(effects)
+plot(allEffects(modelauto))
+#plot(allEffects(modelpicked))
+```
+
+##9)diagnostics
+
+Residual plotting - seems good liearity 
+```{r}
+library(car)
+residualPlots(modelauto)
+```
+
+outlier test - 25 seems to be an outlier 
+```{r}
+outlierTest(modelauto)
+```
+
+Leverage - 1058 and 465 has the largest hat values but bonferroni p values are close to 1. Even here 25 stands out in cook's distance (so does 60).
+```{r}
+influenceIndexPlot(modelauto, id.n=3)
+```
+
+influencial data - 25,1058,465,60 stand out again but so does 662 as influencial.
+```{r}
+influencePlot(modelauto)
+```
+
+vif - none of the vifs exceed 1 so we are good as we have no multicolinearity to worry about
+```{r}
+vif(modelauto)
+```
+
+plotmodel
+```{r}
+plot(modelauto)
+```
+
+##10) what do I think of the diagnostics?
+With all these diagnostics, data point 25 seems to stand out a lot. So I checked if it was entered correctly. Same with the other values that stood out (1058,465,60 & 662). Linearity and multicolinearity seems fine to hve run the tests. 
+
+##11) k-fold calidation 
+```{r}
+##install.packages("caret")
+##install.packages("e1071")
+library(e1071)
+library(caret)
+ctrlMy <- trainControl(method = "repeatedcv", number = 10, savePredictions = TRUE)
+my.variables.titanic$survival=as.factor(my.variables.titanic$survival)
+train(survival ~age+class+gender+sibsp,data=my.variables.titanic, method="glm", family=binomial(link='logit'),
+                 trControl = ctrlMy, tuneLength = 5)
+
+
+```
+#12) how good was the k-fold?
+I get 0.7819048 accuracy which seems good for a model of this type (It's not for medical reasons or anything).
+
+##13)confusion matrix
+I get an accuracy of 0.7837
+```{r}
+predictions<-predict(modelauto, newdata=my.variables.titanic,type="response")
+confusionMatrix(data=as.factor(as.numeric(predictions>0.5)),reference=my.variables.titanic$survival)
+```
+
+
+##14) why are they different?
+They are not the same. This is because they are testing the model in two different methods. K fold is using some of the data to make the model and the other to test it whereas the confusion matrix uses the reference values and the predicted values of all cases and compare them. So they are 2 different methods of checking. One is not better, depends on which one we want to use. 
