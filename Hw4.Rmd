@@ -166,7 +166,7 @@ influencial data - 25,1058,465,60 stand out again but so does 662 as influencial
 influencePlot(modelauto)
 ```
 
-vif - none of the vifs exceed 1 so we are good as we have no multicolinearity to worry about
+vif - none of the vifs exceed 4 so we are good as we have no multicolinearity to worry about
 ```{r}
 vif(modelauto)
 ```
